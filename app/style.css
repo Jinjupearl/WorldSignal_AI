@@ -12,3 +12,9 @@ button:disabled { opacity: .65 }
 ul { padding: 0 }
 li { display: flex; justify-content: space-between; padding: .8rem 0; border-bottom: 1px solid #d3ddd7 }
 @media (max-width: 38rem) { main { margin: 2rem 1rem; padding: 1.25rem } }
+.date-link { padding: .25rem 0; background: transparent; color: #16503e; text-decoration: underline; text-underline-offset: .22em }
+li { align-items: center }
+article { padding: 1rem 0; border-top: 1px solid #d3ddd7; overflow-wrap: anywhere }
+article h3 { margin: 0 }
+article p { white-space: pre-line }
+article a { color: #16503e }

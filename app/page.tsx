@@ -7,7 +7,44 @@ const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 const db = url && key ? createClient(url, key) : null
 type Briefing = { id: string; briefing_date: string; status: string }
 
+type NewsItem = { position: number; title: string; summary_ko: string; source_url: string }
+
+function BriefingDetail({row, onBack}: {row: Briefing; onBack: () => void}) {
+  const [items, setItems] = useState<NewsItem[] | null>(null)
+  const [error, setError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    const controller = new AbortController()
+    async function load() {
+      setError(false)
+      try {
+        const {data, error} = await db!.from('briefing_news')
+          .select('position, title, summary_ko, source_url')
+          .eq('briefing_id', row.id).order('position').abortSignal(controller.signal)
+        if (error) throw error
+        if (!controller.signal.aborted) setItems(data)
+      } catch {
+        if (!controller.signal.aborted) setError(true)
+      }
+    }
+    void load()
+    return () => controller.abort()
+  }, [row.id, attempt])
+  return <section aria-label="브리핑 상세">
+    <button type="button" onClick={onBack}>목록으로</button>
+    <h2>{row.briefing_date} 브리핑</h2>
+    {error ? <p role="alert">뉴스를 불러오지 못했습니다. <button onClick={() => setAttempt(n => n + 1)}>다시 조회</button></p>
+      : items === null ? <p role="status">뉴스를 불러오는 중입니다.</p>
+      : items.length === 0 ? <p>아직 이 브리핑에 등록된 뉴스가 없습니다.</p>
+      : items.map(item => <article key={item.position}>
+          <h3>{item.title}</h3><p>{item.summary_ko}</p>
+          {/^https?:\/\//i.test(item.source_url) && <a href={item.source_url} target="_blank" rel="noopener noreferrer" aria-label={item.title + ' 원문 보기 (새 탭)'}>원문 보기 ↗</a>}
+        </article>)}
+  </section>
+}
+
 function Briefings({userId}: {userId: string}) {
+  const [selected, setSelected] = useState<Briefing | null>(null)
   const [rows, setRows] = useState<Briefing[] | null>(null)
   const [error, setError] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -30,8 +67,9 @@ function Briefings({userId}: {userId: string}) {
   }, [userId, attempt])
   if (error) return <p role="alert">브리핑을 불러오지 못했습니다. <button onClick={() => setAttempt(n => n + 1)}>다시 조회</button></p>
   if (!rows) return <p role="status">브리핑을 불러오는 중입니다.</p>
+  if (selected) return <BriefingDetail row={selected} onBack={() => setSelected(null)} />
   if (!rows.length) return <p>이 계정에 저장된 브리핑이 없습니다.</p>
-  return <ul>{rows.map(row => <li key={row.id}><time dateTime={row.briefing_date}>{row.briefing_date}</time><span>{row.status === 'draft' ? '초안' : row.status}</span></li>)}</ul>
+  return <ul>{rows.map(row => <li key={row.id}><button className="date-link" onClick={() => setSelected(row)}><time dateTime={row.briefing_date}>{row.briefing_date}</time></button><span>{row.status === 'draft' ? '초안' : row.status}</span></li>)}</ul>
 }
 
 export default function Page() {
