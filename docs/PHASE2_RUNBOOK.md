@@ -48,7 +48,19 @@ select edition_date, status, approved_at, published_at from public.daily_edition
 select status, count(*) from public.email_deliveries group by 1;
 ```
 
+## 마이그레이션 순서 (빈 DEV 기준)
+1. `20261122_baseline_core.sql` — articles·briefings·수집기 (운영 DB 구조를 옮김, 칠레 필터·TRUNCATE 권한 정리)
+2. `20261123_briefing_news.sql`
+3. `20261123b_save_daily_briefing.sql` — URL 고유 제약 + 사용자 인자 방식
+4. `20261124_personalization.sql` (PR #2)
+5. `20261127_phase2_common_edition.sql`
+6. 테스트: `supabase/tests/05_core_tests.sql`, `07_phase2_tests.sql`
+   (05의 T0는 기사 130건 체크섬을 확인하므로, 기사를 옮기지 않은 DB에서는 그 검사만 빼고 실행)
+
 ## 알려진 한계 (다음 단계)
-- 저장소에 `articles`·`briefings`·수집기 등 기본 스키마 마이그레이션이 없습니다 (운영 DB와 PR #2 부트스트랩에만 존재). DEV 적용 전에 기본 스키마 파일을 저장소에 추가해야 합니다.
-- Phase 2 마이그레이션의 첫 검사(사용자가 있는 DB면 중단)는 운영 DB 보호용입니다. 운영 적용 때는 별도 승인 후 이 검사를 대상 ref 확인 방식으로 바꿉니다.
+- **ZIP 부트스트랩과 저장소 PR #2가 다릅니다.** ZIP은 개인화 함수를 public 래퍼(INVOKER) + `private.generate_personalized_edition_internal`(DEFINER)로 나눴고,
+  저장소는 `public.generate_personalized_edition` 하나가 DEFINER입니다. DEV에는 한쪽만 기준으로 적용해야 합니다 (권장: 저장소).
+  테스트 05는 두 구조 모두에서 동작합니다.
+- 기사 130건 데이터는 마이그레이션에 포함하지 않았습니다. DEV에 필요하면 ZIP의 데이터 부분만 따로 넣습니다.
+- Phase 2 마이그레이션의 첫 검사(사용자가 있는 DB면 중단)는 운영 DB 보호용입니다. 운영 적용 때는 별도 승인 후 대상 확인 방식으로 바꿉니다.
 - 사건 묶기(issues)·주장 근거(summary_claims)는 Phase 4 범위입니다.

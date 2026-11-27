@@ -64,8 +64,14 @@ DO $$ BEGIN
   IF jsonb_array_length(public.generate_personalized_edition()) <> 1 THEN
     RAISE EXCEPTION 'FAIL T3 공개 RPC 결과가 1건이 아님';
   END IF;
-  IF jsonb_array_length(private.generate_personalized_edition_internal()) <> 1 THEN
-    RAISE EXCEPTION 'FAIL T3 내부 RPC 결과가 1건이 아님';
+  -- 내부 함수는 ZIP 부트스트랩 구조에만 있음 (저장소 PR #2는 public 함수 하나가 DEFINER)
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'private' AND p.proname = 'generate_personalized_edition_internal') THEN
+    IF jsonb_array_length(private.generate_personalized_edition_internal()) <> 1 THEN
+      RAISE EXCEPTION 'FAIL T3 내부 RPC 결과가 1건이 아님';
+    END IF;
+  ELSE
+    PERFORM public.generate_personalized_edition();
+    RAISE NOTICE '참고 T3 내부 함수 없음(저장소 구조) — 공개 RPC만 확인';
   END IF;
   RAISE NOTICE 'PASS T3 공개·내부 RPC 정상 호출';
 
@@ -227,14 +233,16 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
 
-  BEGIN
-    PERFORM private.generate_personalized_edition_internal();
-    RAISE EXCEPTION 'FAIL T4 비로그인 사용자가 내부 RPC 실행' USING ERRCODE = 'XX000';
-  EXCEPTION
-    WHEN insufficient_privilege THEN NULL;
-    WHEN raise_exception THEN
-      RAISE NOTICE '참고 T4 anon이 내부 함수까지 도달했지만 함수 안에서 차단됨 → EXECUTE 권한 회수 권장';
-  END;
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'private' AND p.proname = 'generate_personalized_edition_internal') THEN
+    BEGIN
+      PERFORM private.generate_personalized_edition_internal();
+      RAISE EXCEPTION 'FAIL T4 비로그인 사용자가 내부 RPC 실행' USING ERRCODE = 'XX000';
+    EXCEPTION
+      WHEN insufficient_privilege THEN NULL;
+      WHEN raise_exception THEN
+        RAISE NOTICE '참고 T4 anon이 내부 함수까지 도달했지만 함수 안에서 차단됨 → EXECUTE 권한 회수 권장';
+    END;
+  END IF;
 
   BEGIN
     PERFORM public.save_daily_briefing('00000000-0000-0000-0000-000000000001', '[]'::jsonb);
