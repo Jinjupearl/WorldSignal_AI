@@ -18,3 +18,9 @@ article { padding: 1rem 0; border-top: 1px solid #d3ddd7; overflow-wrap: anywher
 article h3 { margin: 0 }
 article p { white-space: pre-line }
 article a { color: #16503e }
+details { margin-block: .75rem }
+summary { cursor: pointer; font-weight: 600 }
+fieldset { border: 1px solid #c4cec8; border-radius: .3rem }
+.choice { display: inline-flex; align-items: center; margin-right: .75rem }
+.choice input { width: auto }
+select { padding: .65rem; font: inherit }
