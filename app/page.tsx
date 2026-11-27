@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Personalization } from './preferences'
+import { Editions } from './editions'
 import { createClient, type Session } from '@supabase/supabase-js'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -104,8 +105,8 @@ export default function Page() {
   }
   if (!db) return <p role="alert">Supabase 연결 설정이 필요합니다.</p>
   if (session === undefined) return <p role="status">로그인 상태를 확인하는 중입니다.</p>
-  return <><h1>{session ? '내 브리핑' : '로그인'}</h1>
-    {session ? <><p>{session.user.email}</p><Personalization key={"preferences-" + session.user.id} db={db} userId={session.user.id}/><Briefings key={session.user.id} userId={session.user.id}/><button disabled={busy} onClick={logout}>로그아웃</button></>
+  return <><h1>{session ? '아침 브리핑' : '로그인'}</h1>
+    {session ? <><p>{session.user.email}</p><Editions db={db}/><Personalization key={"preferences-" + session.user.id} db={db} userId={session.user.id}/><Briefings key={session.user.id} userId={session.user.id}/><button disabled={busy} onClick={logout}>로그아웃</button></>
       : <form onSubmit={login}><label>이메일<input name="email" type="email" autoComplete="username" required/></label>
         <label>비밀번호<input name="password" type="password" autoComplete="current-password" required/></label>
         <button disabled={busy}>{busy ? '로그인 중…' : '로그인'}</button></form>}
